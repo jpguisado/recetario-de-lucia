@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+model Ingredient {
+    id Int @id @default(autoincrement())
+    name String
+    dishes IngredientsinDishes[]
+}
+
+model Dish {
+    id Int @id @default(autoincrement())
+    name String
+    ingredients IngredientsinDishes[]
+    plannedMeal plannedMeal[]
+    kcal String @default("")
+    recipe String @default("")
+}
+
+model IngredientsinDishes {
+    dish    Dish @relation(fields: [dishId], references: [id], onDelete: Cascade)
+    dishId  Int
+    ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+    ingredientId Int
+    quantity String @default("")
+    quantityUnit String @default("")
+    isListedInShoppingList Boolean @default(false)
+    @@id([dishId, ingredientId])
+}
+
+enum Meal {
+    BREAKFAST
+    MIDMORNING
+    LUNCH
+    SNACK
+    DINNER
+    COMPLEMENTARY
+}
+
+model plannedMeal {
+    id Int @id @default(autoincrement())
+    meal Meal
+    dish Dish @relation(fields: [dishId], references: [id])
+    dishId Int
+    plannedDay plannedDay @relation(fields: [plannedDayId], references: [id])
+    plannedDayId Int
+}
+
+model plannedDay {
+    id Int @id @default(autoincrement())
+    day DateTime @db.Date @unique
+    plannedMeal plannedMeal[]
+}
+
+model shoppingList {
+    id Int @id @default(autoincrement())
+    name String
+    quantity String @default("")
+    quantityUnit String @default("")
+    isBought Boolean? @default(false)
+}

@@ -1,0 +1,114 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["strictUndefinedChecks", "prismaSchemaFolder"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id Int @id @default(autoincrement())
+  title String @unique
+  description String @default("")
+  enviroments Environment[]
+}
+
+model Environment {
+  id Int @id @default(autoincrement())
+  title String @unique
+  URL String @default("")
+  testCaseInEnvironment TestCaseInEnvironment[]
+  project Project @relation(fields: [projectId], references: [id])
+  projectId Int
+  stepsInEnvironment StepStatusByEnvironment[]
+}
+
+model User {
+  id    String  @unique
+  email String  @unique
+  name  String
+  assignedTest TestCaseInEnvironment[]
+}
+
+model userEpic {
+  id Int @id @default(autoincrement())
+  title String @unique
+  description String @default("")
+  userStoriesOfThisEpic userStory[]
+}
+
+model userStory {
+  id Int @id @default(autoincrement())
+  title String @unique
+  description String @default("")
+  userEpic userEpic ? @relation(fields: [userEpicId], references: [id])
+  userEpicId Int ?
+  casesOfThisStory testCase[]
+}
+
+model testCase {
+  id Int @id @default(autoincrement())
+  titleCase String @unique
+  preconditions String @default("")
+  relatedStory userStory ? @relation(fields: [relatedStoryId], references: [id])
+  relatedStoryId Int ?
+  stepList step[]
+  executionOrder Int @default(autoincrement())
+  updatedAt DateTime @default(now())
+  environmentWhereIsExecuted TestCaseInEnvironment[]
+}
+
+model step {
+  id Int @id @default(autoincrement())
+  case testCase @relation(fields: [testCaseId], references: [id])
+  testCaseId Int
+  stepDescription String
+  expectedResult String
+  isBlocker String ?
+  order Int
+  stepStatusByEnv StepStatusByEnvironment[]
+}
+
+model TestCaseInEnvironment {
+  environment Environment @relation(fields: [environmentId], references: [id])
+  environmentId Int
+  testCase testCase @relation(fields: [testCaseId], references: [id]) 
+  testCaseId Int
+  cicle Cicle @relation(fields: [cicleId], references: [id])
+  cicleId Int @default(1)
+  executor User @relation(fields: [userId], references: [id])
+  userId String 
+  status String @default("pendiente")
+  @@id([environmentId, testCaseId])
+}
+
+model StepStatusByEnvironment {
+  environment Environment @relation(fields: [environmentId], references: [id])
+  environmentId Int
+  step step @relation(fields: [stepId], references: [id])
+  stepId Int
+  cicle Cicle @relation(fields: [cicleId], references: [id])
+  cicleId Int @default(1)
+  status String
+  comment String ?
+  @@id([environmentId, stepId])
+}
+
+model Cicle {
+    id Int @id @default(autoincrement())
+    title String
+    startDate DateTime
+    endDate DateTime
+    status String
+
+    TestCaseInEnvironment TestCaseInEnvironment[]
+    StepStatusByEnvironment StepStatusByEnvironment[]
+}
