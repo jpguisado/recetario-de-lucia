@@ -2,69 +2,59 @@
 import { AppleIcon, Trash2Icon } from "lucide-react";
 import { Combobox } from "./combobox";
 import { useState } from "react";
-import { z } from "zod";
-import { Dish, DishListType, DishType } from "~/models/types/dish.type";
+import type { DishListType, DishType } from "~/models/types/dish.type";
+import type { PlannedDayType, PlannedWeekType } from "~/models/types/plannedDay";
+import type { PlannedMealType } from "~/models/types/plannedMeal";
 
-const mealSchema = z.object({
-    key: z.number(),
-    label: z.string(),
-})
-
-const mealOfDaySchema = mealSchema.array();
-
-const daySchema = z.object({
-    label: z.string(),
-    key: z.string(),
-    meal: mealOfDaySchema
-});
-
-const weekSchema = daySchema.array();
-
-export type MealType = z.infer<typeof mealSchema>
-export type MealsOfADayType = z.infer<typeof mealOfDaySchema>
-export type DayType = z.infer<typeof daySchema>
-export type WeekType = z.infer<typeof weekSchema>
-
-const mealsOfMeals = [];
+const allWeekMeals = []
 for (let i = 0; i < 7; i++) {
-    const mealsOfDay = [];
+    const oneDayMeals: PlannedMealType[] = [] // comidas de un día
     for (let j = 0; j < 6; j++) {
-        mealsOfDay.push({ key: Math.random(), label: "-" });
+        oneDayMeals.push({
+            id: Math.random(),
+            dish: {
+                id: Math.random(),
+                name: '-'
+            }
+        })
     }
-    mealsOfMeals.push(mealsOfDay);
+    allWeekMeals.push(oneDayMeals)
 }
-const emptyWeek: WeekType = [
-    { label: 'Lunes', key: crypto.randomUUID(), meal: mealsOfMeals[0]! },
-    { label: 'Martes', key: crypto.randomUUID(), meal: mealsOfMeals[1]! },
-    { label: 'Miércoles', key: crypto.randomUUID(), meal: mealsOfMeals[2]! },
-    { label: 'Jueves', key: crypto.randomUUID(), meal: mealsOfMeals[3]! },
-    { label: 'Viernes', key: crypto.randomUUID(), meal: mealsOfMeals[4]! },
-    { label: 'Sábado', key: crypto.randomUUID(), meal: mealsOfMeals[5]! },
-    { label: 'Domingo', key: crypto.randomUUID(), meal: mealsOfMeals[6]! },
-];
+
+const emptyWeek: PlannedWeekType = [] // dias de la semana
+for (let i = 0; i < 7; i++) {
+    emptyWeek.push({
+        id: Math.random(),
+        day: new Date(),
+        plannedMeal: allWeekMeals[i]! // aqui se está metiendo siete veces lo mismo
+    })
+}
 
 export default function DishDesignerComponent(
-    { plannedDays, dishList }: { 
-        plannedDays: unknown, 
+    { plannedWeek, dishList }: { 
+        plannedWeek: PlannedWeekType, 
         dishList: DishListType }
 ) {
-
+    console.log(plannedWeek)
+    console.log(emptyWeek)
     const [isHovering, setIsHovering] = useState<number | null>();
-    const [draggedValue, setDraggedValue] = useState<DishType>({
-        id: 0,
-        name: '',
+    const [draggedValue, setDraggedValue] = useState<DishType>({ // TODO
+        name: '-',
+        id: Math.random(),
+        recipe: '',
+        ingredientList: []
     });
     const [mealsOfWeek, setMealsOfWeek] = useState(emptyWeek);
-    const updateMealOfWeek = (mealKey: number, updatedMeal: { key: number, label: string }) => {
-        const revisedMeals: WeekType = mealsOfWeek.map((day: DayType) => {
+    const updateMealOfWeek = (dishId: number, newDish: DishType) => {
+        const revisedMeals: PlannedWeekType = mealsOfWeek.map((day: PlannedDayType) => {
             return {
-                key: day.key,
-                label: day.label,
-                meal: day.meal.map((mealToFind) => {
-                    if (mealToFind.key === updatedMeal.key) {
-                        return { key: Math.random(), label: "-" }
+                id: day.id,
+                day: day.day,
+                plannedMeal: day.plannedMeal.map((dishToFind) => {
+                    if (dishToFind.id === newDish.id) {
+                        return { id: Math.random(), dish: { name: '-', id: Math.random() } }
                     } else {
-                        return mealToFind
+                        return dishToFind
                     }
                 })
             }
@@ -72,13 +62,13 @@ export default function DishDesignerComponent(
 
         const up = revisedMeals.map((day) => {
             return {
-                label: day.label,
-                key: day.key,
-                meal: day.meal.map((meal) => {
-                    if (meal.key === mealKey) {
-                        return updatedMeal
+                id: day.id,
+                day: day.day,
+                plannedMeal: day.plannedMeal.map((dish) => {
+                    if (dish.id === dishId) {
+                        return dish // CAMBIAR ESTO
                     } else {
-                        return meal
+                        return dish
                     }
                 })
             }
@@ -126,7 +116,39 @@ export default function DishDesignerComponent(
                         <div className="h-16 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Cena</div>
                         <div className="h-16 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Snack</div>
                     </div>
-                    {mealsOfWeek.map((day) => {
+                    {mealsOfWeek.map((meal) => {
+                        return <div key={meal.id} className="grid gap-1 h-96">
+                            {meal.plannedMeal.map((dishOfAMeal) => {
+                                return <div key={dishOfAMeal.id}
+                                    draggable
+                                    onDragStart={() => setDraggedValue(dishOfAMeal.dish)}
+                                    onDragOver={(event) => {
+                                        event.stopPropagation();
+                                        event.preventDefault();
+                                        setIsHovering(dishOfAMeal.dish.id);
+                                    }}
+                                    onDragLeave={() => { setIsHovering(null) }}
+                                    onDrop={() => { // TODO
+                                        updateMealOfWeek(dishOfAMeal.dish.id!, draggedValue);
+                                    }}
+                                    className={`h-16 
+                                            items-center
+                                            flex 
+                                            justify-center
+                                            text-sm
+                                            font-medium
+                                            transition-all
+                                            duration-200
+                                            ${isHovering === dishOfAMeal.dish.id ?
+                                            'border-slate-700 border-dashed border-2 rounded-[4px]' :
+                                            ''}`
+                                    }>
+                                    {dishOfAMeal.dish.name}
+                                </div>
+                            })}
+                        </div>
+                    })}
+                    {/* {mealsOfWeek.map((day) => {
                         return <div key={day.key} className="grid gap-1 h-96">
                             {day.meal.map((meal) => {
                                 return <div
@@ -144,7 +166,7 @@ export default function DishDesignerComponent(
                                     className={`h-16 items-center flex justify-center text-sm font-medium transition-all duration-200 ${isHovering === meal.key ? 'border-slate-700 border-dashed border-2 rounded-[4px]' : ''}`}>{meal.label}</div>
                             })}
                         </div>
-                    })}
+                    })} */}
                 </div>
                 <div className="bg-red-500 text-white flex justify-center border-[1px] rounded-[2px] px-4 py-2 text-sm font-medium mt-3 items-center gap-3">Eliminar comida<Trash2Icon /></div>
             </div>
