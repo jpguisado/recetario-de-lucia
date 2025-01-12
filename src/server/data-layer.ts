@@ -1,3 +1,4 @@
+import { dishListSchema } from "~/models/schemas/dish";
 import { db } from "./db";
 
 /**
@@ -30,4 +31,15 @@ export async function fetchPlannedDays(datesOfTheWeek: Date[]) {
     comidaPlanificada.map((comida) => comida.plannedMeal.sort((a, b) => MEALS.indexOf(a.meal) - MEALS.indexOf(b.meal)))
 
     return comidaPlanificada;
+}
+
+/**
+ * Fetch list of dish
+ * @returns 
+ */
+export async function fetchDishList() {
+    const dishes = await db.dish.findMany();
+    const { success, data } = dishListSchema.safeParse(dishes);
+    if (!success) throw new Error('Invalid dish data');
+    return data;
 }
