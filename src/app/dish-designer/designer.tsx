@@ -1,11 +1,22 @@
 'use client';
-import { AppleIcon, Trash2Icon } from "lucide-react";
-import { Combobox } from "./combobox";
+import { AppleIcon, ChevronLeftCircle, ChevronRightCircle, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import type { DishListType, DishType } from "~/models/types/dish.type";
 import type { PlannedDayType, PlannedWeekType } from "~/models/types/plannedDay";
 import type { PlannedMealType } from "~/models/types/plannedMeal";
+import { Input } from "~/components/ui/input";
 
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from "~/components/ui/select"
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Button } from "~/components/ui/button";
 const allWeekMeals = []
 for (let i = 0; i < 7; i++) {
     const oneDayMeals: PlannedMealType[] = [] // comidas de un día
@@ -31,12 +42,36 @@ for (let i = 0; i < 7; i++) {
 }
 
 export default function DishDesignerComponent(
-    { plannedWeek, dishList }: { 
-        plannedWeek: PlannedWeekType, 
-        dishList: DishListType }
+    { plannedWeek, dishList, weekDates }: {
+        plannedWeek: PlannedWeekType,
+        dishList: DishListType,
+        weekDates: Date[]
+    }
 ) {
-    console.log(plannedWeek)
-    console.log(emptyWeek)
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const { replace } = useRouter();
+    const [startingDate, setStartingDate] = useState(new Date());
+    /**
+     * Sets the starting date to configure the calendar
+     * @param e  React mouse event
+     * @param action Add or remove action
+     */
+    const setCalendarStartDate = async (e: React.MouseEvent<HTMLButtonElement>, action: string): Promise<void> => {
+        e.preventDefault();
+        const timeInMilis = action === 'add' ? startingDate.getTime() + (86400000 * 7) : startingDate.getTime() - (86400000 * 7);
+        setStartingDate(new Date(timeInMilis));
+        await setDateInSearchParams(timeInMilis)
+    }
+    /**
+     * Sets date in Search params
+     */
+    async function setDateInSearchParams(startingDate: number) {
+        const params = new URLSearchParams(searchParams);
+        params.set('dateInMilis', startingDate.toString())
+        replace(`${pathname}?${params.toString()}`);
+    }
     const [isHovering, setIsHovering] = useState<number | null>();
     const [draggedValue, setDraggedValue] = useState<DishType>({ // TODO
         name: '-',
@@ -51,7 +86,7 @@ export default function DishDesignerComponent(
                 id: day.id,
                 day: day.day,
                 plannedMeal: day.plannedMeal.map((dishToFind) => {
-                    if (dishToFind.id === newDish.id) {
+                    if (dishToFind.dish.id === newDish.id) {
                         return { id: Math.random(), dish: { name: '-', id: Math.random() } }
                     } else {
                         return dishToFind
@@ -59,14 +94,16 @@ export default function DishDesignerComponent(
                 })
             }
         })
-
         const up = revisedMeals.map((day) => {
             return {
                 id: day.id,
                 day: day.day,
                 plannedMeal: day.plannedMeal.map((dish) => {
-                    if (dish.id === dishId) {
-                        return dish // CAMBIAR ESTO
+                    if (dish.dish.id === dishId) {
+                        return {
+                            ...dish,
+                            dish: newDish,
+                        } // CAMBIAR ESTO
                     } else {
                         return dish
                     }
@@ -76,15 +113,30 @@ export default function DishDesignerComponent(
         setMealsOfWeek(up);
     }
     return (
-        <main className="grid grid-cols-12 gap-6 p-24">
-            <div className="col-span-12 bg-blue-50">
+        <main className="grid grid-cols-12 gap-6 px-24 p-8">
+            <div className="col-span-12">
                 <h1 className="items-center font-medium h-12 text-4xl flex">Semana 43</h1>
                 <h2 className="items-center h-12 text-3xl flex">12 jul - 18 jul</h2>
             </div>
             <div className="col-span-4 flex flex-col gap-1">
-                <Combobox frameworks={[{ label: "React", value: "react" }, { label: "Vue", value: "vue" }]} />
-                <Combobox frameworks={[{ label: "React", value: "react" }, { label: "Vue", value: "vue" }]} />
-                <div className="border-[1px] rounded-[2px] px-4 py-2 text-sm font-medium flex flex-col gap-3">
+                <Select>
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecciona una categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectGroup>
+                            <SelectLabel>Categorías</SelectLabel>
+                            <SelectItem value="desayuno">Desayuno</SelectItem>
+                            <SelectItem value="media mañana">Media mañana</SelectItem>
+                            <SelectItem value="almuerzo">Almuerzo</SelectItem>
+                            <SelectItem value="merienda">Merienda</SelectItem>
+                            <SelectItem value="cena">Cena</SelectItem>
+                            <SelectItem value="snack">Snack</SelectItem>
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
+                <Input placeholder="Introduce texto para filtrar los platos:" />
+                <div className="border-[1px] rounded-[2px] px-4 py-2 text-sm font-medium flex flex-col gap-3 h-80 overflow-x-scroll">
                     <div>Dishes:</div>
                     {dishList.map((dish) => {
                         return (
@@ -96,17 +148,27 @@ export default function DishDesignerComponent(
                     })}
                 </div>
             </div>
-            <div className="col-span-8">
+            <div className="col-span-8 gap-3 flex flex-col">
                 <div className="grid grid-cols-8 gap-x-3 gap-y-1 text-center">
                     {/* Days of the week */}
-                    <div className=""></div>
-                    <div className="h-6 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Lunes</div>
-                    <div className="h-6 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Martes</div>
-                    <div className="h-6 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Miércoles</div>
-                    <div className="h-6 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Jueves</div>
-                    <div className="h-6 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Viernes</div>
-                    <div className="h-6 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Sábado</div>
-                    <div className="h-6 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Domingo</div>
+                    <div className="flex justify-between items-center">
+                        <Button onClick={(e) => setCalendarStartDate(e, 'remove')}>
+                            <ChevronLeftCircle  />
+                        </Button>
+                        <Button onClick={(e) => setCalendarStartDate(e, 'add')}>
+                            <ChevronRightCircle />
+                        </Button>
+                    </div>
+                    {weekDates.map((dia) =>
+                        <div key={dia.getMilliseconds()} className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">{dia.getDate()}</div>
+                    )}
+                    {/* <div className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Lunes 10/1/2024</div>
+                    <div className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Martes 10/1/2024</div>
+                    <div className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Miércoles 10/1/2024</div>
+                    <div className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Jueves 10/1/2024</div>
+                    <div className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Viernes 10/1/2024</div>
+                    <div className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Sábado 10/1/2024</div>
+                    <div className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Domingo 10/1/2024</div> */}
                     {/* Meals */}
                     <div className="grid gap-1">
                         <div className="h-16 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Desayuno</div>
@@ -148,27 +210,11 @@ export default function DishDesignerComponent(
                             })}
                         </div>
                     })}
-                    {/* {mealsOfWeek.map((day) => {
-                        return <div key={day.key} className="grid gap-1 h-96">
-                            {day.meal.map((meal) => {
-                                return <div
-                                    key={meal.key} draggable
-                                    onDragStart={() => setDraggedValue(meal)}
-                                    onDrop={() => {
-                                        updateMealOfWeek(meal.key, draggedValue);
-                                    }}
-                                    onDragOver={(event) => {
-                                        event.stopPropagation();
-                                        event.preventDefault();
-                                        setIsHovering(meal.key);
-                                    }}
-                                    onDragLeave={() => { setIsHovering(null) }}
-                                    className={`h-16 items-center flex justify-center text-sm font-medium transition-all duration-200 ${isHovering === meal.key ? 'border-slate-700 border-dashed border-2 rounded-[4px]' : ''}`}>{meal.label}</div>
-                            })}
-                        </div>
-                    })} */}
                 </div>
-                <div className="bg-red-500 text-white flex justify-center border-[1px] rounded-[2px] px-4 py-2 text-sm font-medium mt-3 items-center gap-3">Eliminar comida<Trash2Icon /></div>
+                {
+
+                    <div className="bg-red-500 text-white flex justify-center border-[1px] rounded-[2px] px-4 py-2 text-sm font-medium items-center gap-3">Eliminar comida<Trash2Icon /></div>
+                }
             </div>
         </main>
     )
