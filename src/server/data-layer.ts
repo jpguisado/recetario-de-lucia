@@ -1,7 +1,7 @@
+"use server"
 import { dishListSchema } from "~/models/schemas/dish";
 import { db } from "./db";
-import { plannedDaySchema, plannedWeekSchema } from "~/models/schemas/plannedDay";
-import { PlannedDayType, PlannedWeekType } from "~/models/types/plannedDay";
+import { plannedWeekSchema } from "~/models/schemas/plannedDay";
 
 /**
  * Gets all the planned days of a week, including meals an dishes.

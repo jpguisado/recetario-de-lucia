@@ -5,10 +5,32 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export const MEALS = [
+  {
+    label: 'BREAKFAST',
+    icon: ''
+  },{
+    label: 'MIDMORNING',
+    icon: '',
+  },{
+    label: 'LUNCH',
+    icon: '',
+  }, {
+    label: 'SNACK',
+    icon: '', 
+  },{
+    label: 'DINNER',
+    icon: '',
+  },{
+    label: 'COMPLEMENTARY',
+    icon: '',
+  }
+];
+
+
 /**
 * Calculates an array of seven consecutive dates starting from a given date
-* @param firstDayOfWeek The starting date to calculate the week from
-* @param firstDateOfWeek It will be the date of the first day of week
+* @param startDate The starting date to calculate the week from
 * @returns Array of 7 consecutive dates
 */
 export const getWeekDates = (startDate: Date): Date[] => {
