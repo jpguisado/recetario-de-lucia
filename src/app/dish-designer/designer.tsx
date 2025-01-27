@@ -1,6 +1,6 @@
 'use client';
 import { AppleIcon, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import type { DishListType, DishType } from "~/models/types/dish.type";
 import type { PlannedDayType, PlannedWeekType } from "~/models/types/plannedDay";
 import { Input } from "~/components/ui/input";
@@ -14,7 +14,8 @@ import {
     SelectValue,
 } from "~/components/ui/select";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { getWeekDates, getWeekStartDate } from "~/lib/utils";
+import { getWeekDates, getWeekStartDate, MEALS } from "~/lib/utils";
+import { plannedDaySchema } from "~/models/schemas/plannedDay";
 
 export default function DishDesignerComponent(
     { dishList, plannedWeek }: {
@@ -66,6 +67,8 @@ export default function DishDesignerComponent(
         router.replace(`${pathname}?${params.toString()}`);
     }
 
+    const [fromCoordinates, setFromCoordinates] = useState<{dayIndex: number, mealIndex: number}>();
+    const [toCoordinates, setToCoordinates] = useState<{dayIndex: number, mealIndex: number}>();
     const [isHovering, setIsHovering] = useState<number | null>();
     const [draggedValue, setDraggedValue] = useState<DishType>({ // TODO
         name: '-',
@@ -77,37 +80,22 @@ export default function DishDesignerComponent(
         getWeekDates(firstDayOfTheWeek)
     );
     const [mealsOfWeek, setMealsOfWeek] = useState(plannedWeek);
-    const updateMealOfWeek = (dishId: number, newDish: DishType) => {
-        const revisedMeals: PlannedWeekType = mealsOfWeek.map((day: PlannedDayType) => {
-            return {
-                id: day.id,
-                day: day.day,
-                plannedMeal: day.plannedMeal.map((dishToFind) => {
-                    if (dishToFind.dish.id === newDish.id) {
-                        return { id: Math.random(), dish: { name: '-', id: Math.random() } }
-                    } else {
-                        return dishToFind
-                    }
-                })
-            }
-        })
-        const up = revisedMeals.map((day) => {
-            return {
-                id: day.id,
-                day: day.day,
-                plannedMeal: day.plannedMeal.map((dish) => {
-                    if (dish.dish.id === dishId) {
-                        return {
-                            ...dish,
-                            dish: newDish,
-                        } // CAMBIAR ESTO
-                    } else {
-                        return dish
-                    }
-                })
-            }
+    const updateMealOfWeek = (newDish: DishType) => {
+        // If x and y coordinates doesn't exist
+        
+        // First we empty the origin slot
+        const removeMeal: PlannedWeekType = mealsOfWeek.toSpliced(fromCoordinates!.dayIndex, 1, {
+            id: Math.random(),
+            day: mealsOfWeek[fromCoordinates!.dayIndex]!.day,
+            plannedMeal: mealsOfWeek[fromCoordinates!.dayIndex]!.plannedMeal.toSpliced(fromCoordinates!.mealIndex, 1, { meal: MEALS[fromCoordinates!.mealIndex]!.label, id: Math.random(), dish: { name: '-' } })
         });
-        setMealsOfWeek(up);
+        // Then we add the new dish in target slot
+        const addMeal: PlannedWeekType = removeMeal.toSpliced(toCoordinates!.dayIndex, 1, {
+            id: Math.random(),
+            day: mealsOfWeek[toCoordinates!.dayIndex]!.day,
+            plannedMeal: mealsOfWeek[toCoordinates!.dayIndex]!.plannedMeal.toSpliced(toCoordinates!.mealIndex, 1, { meal: MEALS[toCoordinates!.mealIndex]!.label, id: Math.random(), dish: newDish })
+        });
+        setMealsOfWeek(addMeal);
     }
     return (
         <main className="grid grid-cols-12 gap-6 px-24 p-8">
@@ -135,18 +123,16 @@ export default function DishDesignerComponent(
                 <Input placeholder="Introduce texto para filtrar los platos:" />
                 <div className="border-[1px] rounded-[2px] px-4 py-2 text-sm font-medium flex flex-col gap-3 h-80 overflow-x-scroll">
                     <div>Dishes:</div>
-                    {
-                        <Suspense fallback="Scheleton..">
-                            {dishList.map((dish) => {
-                                return (
-                                    <div key={dish.id} draggable onDragStart={() => setDraggedValue(dish)} className="hover:bg-slate-50 border-[1px] bg-white rounded-[2px] p-3 flex gap-2 items-center">
-                                        <AppleIcon />
-                                        {dish.name}
-                                    </div>
-                                )
-                            })}
-                        </Suspense>
-                    }
+                    {dishList.map((dish) => {
+                        return <div
+                            className="hover:bg-slate-50 border-[1px] bg-white rounded-[2px] p-3 flex gap-2 items-center"
+                            key={dish.id}
+                            draggable
+                            onDragStart={() => setDraggedValue(dish)}>
+                            <AppleIcon />
+                            {dish.name}
+                        </div>
+                    })}
                 </div>
             </div>
             <div className="col-span-8 gap-3 flex flex-col">
@@ -167,22 +153,30 @@ export default function DishDesignerComponent(
                         <div className="h-16 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Cena</div>
                         <div className="h-16 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Snack</div>
                     </div>
-                    {mealsOfWeek.map((meal) => {
-                        return <div key={meal.id} className="grid gap-1 h-96">
-                            {meal.plannedMeal.map((dishOfAMeal) => {
-                                return <div key={dishOfAMeal.id}
-                                    draggable
-                                    onDragStart={() => setDraggedValue(dishOfAMeal.dish)}
-                                    onDragOver={(event) => {
-                                        event.stopPropagation();
-                                        event.preventDefault();
-                                        setIsHovering(dishOfAMeal.dish.id);
-                                    }}
-                                    onDragLeave={() => { setIsHovering(null) }}
-                                    onDrop={() => { // TODO
-                                        updateMealOfWeek(dishOfAMeal.dish.id!, draggedValue);
-                                    }}
-                                    className={`h-16 
+                    {mealsOfWeek.map((day, dayIndex) => {
+                        return (
+                            <div key={day.id} className="grid gap-1 h-96">
+                                {day.plannedMeal.map((mealsOfADay, mealIndex) => {
+                                    return (
+                                        <div key={mealsOfADay.id}
+                                            draggable
+                                            onDragStart={
+                                                () => {
+                                                    setFromCoordinates({dayIndex, mealIndex});
+                                                    setDraggedValue(mealsOfADay.dish);
+                                                }
+                                            }
+                                            onDragOver={(event) => {
+                                                event.stopPropagation();
+                                                event.preventDefault();
+                                                setToCoordinates({dayIndex, mealIndex});
+                                                setIsHovering(mealsOfADay.dish.id);
+                                            }}
+                                            onDragLeave={() => { setIsHovering(null) }}
+                                            onDrop={() => { // TODO
+                                                updateMealOfWeek(draggedValue);
+                                            }}
+                                            className={`h-16 
                                             items-center
                                             flex 
                                             justify-center
@@ -190,14 +184,16 @@ export default function DishDesignerComponent(
                                             font-medium
                                             transition-all
                                             duration-200
-                                            ${isHovering === dishOfAMeal.dish.id ?
-                                            'border-slate-700 border-dashed border-2 rounded-[4px]' :
-                                            ''}`
-                                    }>
-                                    {dishOfAMeal.dish.name}
-                                </div>
-                            })}
-                        </div>
+                                            ${isHovering === mealsOfADay.dish.id ?
+                                                    'border-slate-700 border-dashed border-2 rounded-[4px]' :
+                                                    ''}`
+                                            }>
+                                            {mealsOfADay.dish.name}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )
                     })}
                 </div>
             </div>

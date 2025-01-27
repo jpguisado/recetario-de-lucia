@@ -1,4 +1,3 @@
-import { MEALS } from "~/lib/utils";
 import DishDesignerComponent from "./designer";
 import { fetchDishList, fetchPlannedDays } from "~/server/data-layer";
 
@@ -12,13 +11,13 @@ export default async function DishDesignerPage() {
         'COMPLEMENTARY',
     ];
     const dates = [
-        new Date(2025, 0, 6, 1),
-        new Date(2025, 0, 7, 1),
-        new Date(2025, 0, 8, 1),
-        new Date(2025, 0, 9, 1),
-        new Date(2025, 0, 10, 1),
-        new Date(2025, 0, 11, 1),
-        new Date(2025, 0, 12, 1),
+        new Date(2025, 0, 27, 1),
+        new Date(2025, 0, 28, 1),
+        new Date(2025, 0, 29, 1),
+        new Date(2025, 0, 30, 1),
+        new Date(2025, 0, 31, 1),
+        new Date(2025, 1, 1, 1),
+        new Date(2025, 1, 2, 1),
     ]
     const dishList = await fetchDishList();
     const plannedWeek = await fetchPlannedDays(dates);
@@ -56,7 +55,6 @@ export default async function DishDesignerPage() {
             })
         };
     });
-    console.log(filledDays)
     return (
         <DishDesignerComponent
             plannedWeek={filledDays}
