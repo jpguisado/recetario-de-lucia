@@ -2,7 +2,7 @@
 import { AppleIcon, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
 import { useState } from "react";
 import type { DishListType, DishType } from "~/models/types/dish.type";
-import type { PlannedDayType, PlannedWeekType } from "~/models/types/plannedDay";
+import type { PlannedWeekType } from "~/models/types/plannedDay";
 import { Input } from "~/components/ui/input";
 import {
     Select,
@@ -15,10 +15,9 @@ import {
 } from "~/components/ui/select";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getWeekDates, getWeekStartDate, MEALS } from "~/lib/utils";
-import { plannedDaySchema } from "~/models/schemas/plannedDay";
-
+import { type PlannedMealType } from "~/models/types/plannedMeal";
 export default function DishDesignerComponent(
-    { dishList, plannedWeek }: {
+{ dishList, plannedWeek }: {
         plannedWeek: PlannedWeekType
         dishList: DishListType,
     }
@@ -67,9 +66,9 @@ export default function DishDesignerComponent(
         router.replace(`${pathname}?${params.toString()}`);
     }
 
-    const [fromCoordinates, setFromCoordinates] = useState<{dayIndex: number, mealIndex: number}>();
-    const [toCoordinates, setToCoordinates] = useState<{dayIndex: number, mealIndex: number}>();
-    const [isHovering, setIsHovering] = useState<number | null>();
+    const [fromCoordinates, setFromCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
+    const [toCoordinates, setToCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
+    const [isHovering, setIsHovering] = useState<{ x: number, y: number } | null>();
     const [draggedValue, setDraggedValue] = useState<DishType>({ // TODO
         name: '-',
         id: Math.random(),
@@ -80,21 +79,64 @@ export default function DishDesignerComponent(
         getWeekDates(firstDayOfTheWeek)
     );
     const [mealsOfWeek, setMealsOfWeek] = useState(plannedWeek);
-    const updateMealOfWeek = (newDish: DishType) => {
-        // If x and y coordinates doesn't exist
-        
-        // First we empty the origin slot
-        const removeMeal: PlannedWeekType = mealsOfWeek.toSpliced(fromCoordinates!.dayIndex, 1, {
+
+    /**
+     * 
+     * @param newDish 
+     * @returns 
+     */
+    const updatePlannedWeek = (newDish: DishType) => {
+        let mealInPlan: PlannedWeekType = [];
+        if (!toCoordinates) {
+            console.error("Invalid destination coordinates provided");
+            return;
+        }
+        // Generate a empty meal slot
+        const mealSlot = (mealIndex: number) => ({
+            meal: MEALS[mealIndex]!.label,
             id: Math.random(),
-            day: mealsOfWeek[fromCoordinates!.dayIndex]!.day,
-            plannedMeal: mealsOfWeek[fromCoordinates!.dayIndex]!.plannedMeal.toSpliced(fromCoordinates!.mealIndex, 1, { meal: MEALS[fromCoordinates!.mealIndex]!.label, id: Math.random(), dish: { name: '-' } })
+            dish: { name: '-' }
         });
-        // Then we add the new dish in target slot
-        const addMeal: PlannedWeekType = removeMeal.toSpliced(toCoordinates!.dayIndex, 1, {
+
+        // Generate a empty meal slot
+        const mealWithNewDish = (mealIndex: number) => ({
+            meal: MEALS[mealIndex]!.label,
             id: Math.random(),
-            day: mealsOfWeek[toCoordinates!.dayIndex]!.day,
-            plannedMeal: mealsOfWeek[toCoordinates!.dayIndex]!.plannedMeal.toSpliced(toCoordinates!.mealIndex, 1, { meal: MEALS[toCoordinates!.mealIndex]!.label, id: Math.random(), dish: newDish })
+            dish: newDish,
         });
+
+        /**
+         * Updates the meal of a day with a new dish
+         * @param dayIndex the day where the meal is
+         * @param mealIndex the meal position were we are going to insert
+         * @param meal the meal we're going to update
+         * @returns a updated version of a weekly plan 
+         */
+        const updatePlannedMeals = (planToBeUpdated: PlannedWeekType, dayIndex: number, mealIndex: number, meal: PlannedMealType) => {
+            const day = planToBeUpdated[dayIndex]!.day;
+            const updatedPlannedMeal = planToBeUpdated[dayIndex]!.plannedMeal.toSpliced(mealIndex, 1, meal);
+            return {
+                id: Math.random(),
+                day,
+                plannedMeal: updatedPlannedMeal
+            };
+        };
+
+        if (fromCoordinates) {
+            mealInPlan = mealsOfWeek.toSpliced(
+                fromCoordinates.dayIndex,
+                1,
+                updatePlannedMeals(mealsOfWeek, fromCoordinates.dayIndex, fromCoordinates.mealIndex, mealSlot(fromCoordinates.mealIndex))
+            );
+        } else {
+            mealInPlan = mealsOfWeek;
+        }
+
+        const addMeal: PlannedWeekType = mealInPlan.toSpliced(
+            toCoordinates.dayIndex,
+            1,
+            updatePlannedMeals(mealInPlan, toCoordinates.dayIndex, toCoordinates.mealIndex, mealWithNewDish(toCoordinates.mealIndex))
+        )
         setMealsOfWeek(addMeal);
     }
     return (
@@ -162,19 +204,20 @@ export default function DishDesignerComponent(
                                             draggable
                                             onDragStart={
                                                 () => {
-                                                    setFromCoordinates({dayIndex, mealIndex});
+                                                    setFromCoordinates({ dayIndex, mealIndex });
                                                     setDraggedValue(mealsOfADay.dish);
                                                 }
                                             }
                                             onDragOver={(event) => {
                                                 event.stopPropagation();
                                                 event.preventDefault();
-                                                setToCoordinates({dayIndex, mealIndex});
-                                                setIsHovering(mealsOfADay.dish.id);
+                                                setToCoordinates({ dayIndex, mealIndex });
+                                                setIsHovering({ x: dayIndex, y: mealIndex });
                                             }}
                                             onDragLeave={() => { setIsHovering(null) }}
-                                            onDrop={() => { // TODO
-                                                updateMealOfWeek(draggedValue);
+                                            onDrop={() => {
+                                                setIsHovering(null);
+                                                updatePlannedWeek(draggedValue);
                                             }}
                                             className={`h-16 
                                             items-center
@@ -184,7 +227,7 @@ export default function DishDesignerComponent(
                                             font-medium
                                             transition-all
                                             duration-200
-                                            ${isHovering === mealsOfADay.dish.id ?
+                                            ${isHovering?.x === dayIndex && isHovering.y === mealIndex ?
                                                     'border-slate-700 border-dashed border-2 rounded-[4px]' :
                                                     ''}`
                                             }>
@@ -199,4 +242,8 @@ export default function DishDesignerComponent(
             </div>
         </main>
     )
+}
+
+function uuidv4() {
+    throw new Error("Function not implemented.");
 }
