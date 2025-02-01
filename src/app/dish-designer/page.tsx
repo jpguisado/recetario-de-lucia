@@ -2,7 +2,7 @@ import { getWeekDates, getWeekStartDate } from "~/lib/utils";
 import DishDesignerComponent from "./designer";
 import { fetchDishList, fetchPlannedDays } from "~/server/data-layer";
 import { Suspense } from "react";
-export const experimental_ppr = true
+
 export default async function Page(props: {
     searchParams?: Promise<{
         dishName?: string;
@@ -38,7 +38,7 @@ export default async function Page(props: {
 
     return (
         <Suspense fallback={<div>Loading...</div>}>
-            <DishDesignerComponent
+        <DishDesignerComponent
                 storedPlannedWeek={plannedWeek}
                 dishList={dishList}
             />

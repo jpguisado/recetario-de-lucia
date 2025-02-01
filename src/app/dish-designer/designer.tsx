@@ -1,6 +1,6 @@
 'use client';
 import { AppleIcon, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import type { DishListType, DishType } from "~/models/types/dish.type";
 import type { PlannedWeekType } from "~/models/types/plannedDay";
 import { Input } from "~/components/ui/input";
@@ -18,7 +18,7 @@ import { getWeekDates, getWeekNumber, getWeekStartDate, MEALS, MONTHS } from "~/
 import { type PlannedMealType } from "~/models/types/plannedMeal";
 export default function DishDesignerComponent(
     { dishList, storedPlannedWeek }: {
-        storedPlannedWeek: Promise<PlannedWeekType>
+        storedPlannedWeek: Promise<PlannedWeekType>,
         dishList: DishListType,
     }
 ) {
@@ -26,17 +26,21 @@ export default function DishDesignerComponent(
     const router = useRouter();
     const params = useSearchParams();
     const currentDayOnClient = new Date();
+    const week = use(storedPlannedWeek)
     const firstDayOfTheWeek = getWeekStartDate(currentDayOnClient);
     const [fromCoordinates, setFromCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
     const [toCoordinates, setToCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
     const [isHovering, setIsHovering] = useState<{ x: number, y: number } | null>();
-    let plannedWeek = use(storedPlannedWeek)
+    const [plannedWeek, setPlannedWeek] = useState(week);
     const [draggedValue, setDraggedValue] = useState<DishType>({
         name: '-',
         id: Math.random(),
         recipe: '',
         ingredientList: []
     });
+    useEffect(() => {
+        setPlannedWeek(week)
+    },[week])
     const [currentWeekDates, setCurrentWeekDates] = useState(
         getWeekDates(firstDayOfTheWeek)
     );
@@ -78,8 +82,9 @@ export default function DishDesignerComponent(
         params.set('d', newDate.getDate().toString());
         params.set('m', newDate.getMonth().toString());
         params.set('y', newDate.getFullYear().toString());
-        window.history.pushState(null, '', `?${params.toString()}`);
+        console.log('Paramss d',params.get('d'))
         router.replace(`${pathname}?${params.toString()}`);
+        // window.history.pushState(null, '', `?${params.toString()}`);
     }
 
     const filterListOfDishes = (dishName: string) => {
@@ -150,7 +155,7 @@ export default function DishDesignerComponent(
             1,
             updatePlannedMeals(mealInPlan, toCoordinates.dayIndex, toCoordinates.mealIndex, mealWithNewDish(toCoordinates.mealIndex))
         )
-        plannedWeek = addMeal
+        setPlannedWeek(addMeal);
     }
     return (
         <main className="grid grid-cols-12 gap-6 px-24 p-8">

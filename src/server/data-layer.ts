@@ -63,8 +63,6 @@ export async function fetchPlannedDays(datesOfTheWeek: Date[]) {
             })
         };
     });
-    console.log(fillDays);
-
     return fillDays;
 }
 
