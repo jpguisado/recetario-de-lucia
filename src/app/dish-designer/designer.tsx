@@ -1,6 +1,6 @@
 'use client';
 import { AppleIcon, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
-import { useState } from "react";
+import { use, useState } from "react";
 import type { DishListType, DishType } from "~/models/types/dish.type";
 import type { PlannedWeekType } from "~/models/types/plannedDay";
 import { Input } from "~/components/ui/input";
@@ -14,21 +14,37 @@ import {
     SelectValue,
 } from "~/components/ui/select";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { getWeekDates, getWeekStartDate, MEALS } from "~/lib/utils";
+import { getWeekDates, getWeekNumber, getWeekStartDate, MEALS, MONTHS } from "~/lib/utils";
 import { type PlannedMealType } from "~/models/types/plannedMeal";
 export default function DishDesignerComponent(
-{ dishList, plannedWeek }: {
-        plannedWeek: PlannedWeekType
+    { dishList, storedPlannedWeek }: {
+        storedPlannedWeek: Promise<PlannedWeekType>
         dishList: DishListType,
     }
 ) {
     const pathname = usePathname();
     const router = useRouter();
     const params = useSearchParams();
-
-    const activeDateOnClient = new Date();
-    const firstDayOfTheWeek = getWeekStartDate(activeDateOnClient);
-
+    const currentDayOnClient = new Date();
+    const firstDayOfTheWeek = getWeekStartDate(currentDayOnClient);
+    const [fromCoordinates, setFromCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
+    const [toCoordinates, setToCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
+    const [isHovering, setIsHovering] = useState<{ x: number, y: number } | null>();
+    let plannedWeek = use(storedPlannedWeek)
+    const [draggedValue, setDraggedValue] = useState<DishType>({
+        name: '-',
+        id: Math.random(),
+        recipe: '',
+        ingredientList: []
+    });
+    const [currentWeekDates, setCurrentWeekDates] = useState(
+        getWeekDates(firstDayOfTheWeek)
+    );
+    const currentWeekStartAndEndDatesString = `
+        ${currentWeekDates[0]!.getDate()} 
+        ${MONTHS[currentWeekDates[0]!.getMonth()]?.short} - 
+        ${currentWeekDates.at(6)!.getDate()} 
+        ${MONTHS[currentWeekDates[6]!.getMonth()]?.short}`
     function checkActiveDate() {
         if (params.has('d') && params.has('m') && params.has('y')) {
             const d = parseInt(params.get('d')!);
@@ -37,51 +53,47 @@ export default function DishDesignerComponent(
             const dateInParams = new Date(y, m, d);
             return dateInParams;
         } else {
-            return new Date();
+            return firstDayOfTheWeek;
         }
     }
-
-    function adjustWeek(direction: string) {
+    const getCurrentWeekNumber = getWeekNumber(currentWeekDates[0]!);
+    function adjustCurrentWeek(direction: string) {
         const currentDate = checkActiveDate();
         if (direction === 'next') {
             const oneWeekMoreInMilis = currentDate.getTime() + (86400000 * 7);
             const oneWeekMoreDate = new Date(oneWeekMoreInMilis);
             const nextWeekDates = getWeekDates(oneWeekMoreDate);
             updateSearchParams(new Date(oneWeekMoreDate));
-            setWeekDates(nextWeekDates);
+            setCurrentWeekDates(nextWeekDates);
         } else {
             const oneWeekLessInMilis = currentDate.getTime() - (86400000 * 7);
             const oneWeekLessDate = new Date(oneWeekLessInMilis);
             const previousWeekDates = getWeekDates(oneWeekLessDate);
             updateSearchParams(new Date(oneWeekLessDate));
-            setWeekDates(previousWeekDates);
+            setCurrentWeekDates(previousWeekDates);
         }
     }
-
     function updateSearchParams(newDate: Date) {
         const params = new URLSearchParams();
         params.set('d', newDate.getDate().toString());
         params.set('m', newDate.getMonth().toString());
         params.set('y', newDate.getFullYear().toString());
+        window.history.pushState(null, '', `?${params.toString()}`);
         router.replace(`${pathname}?${params.toString()}`);
     }
 
-    const [fromCoordinates, setFromCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
-    const [toCoordinates, setToCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
-    const [isHovering, setIsHovering] = useState<{ x: number, y: number } | null>();
-    const [draggedValue, setDraggedValue] = useState<DishType>({ // TODO
-        name: '-',
-        id: Math.random(),
-        recipe: '',
-        ingredientList: []
-    });
-    const [weekDates, setWeekDates] = useState(
-        getWeekDates(firstDayOfTheWeek)
-    );
-    const [mealsOfWeek, setMealsOfWeek] = useState(plannedWeek);
+    const filterListOfDishes = (dishName: string) => {
+        const searchParams = new URLSearchParams(params);
+        if (dishName) {
+            searchParams.set('dishName', dishName);
+        } else {
+            searchParams.delete('dishName');
+        }
+        router.replace(`${pathname}?${searchParams.toString()}`);
+    }
 
     /**
-     * 
+     * Updates the planification table
      * @param newDish 
      * @returns 
      */
@@ -122,14 +134,15 @@ export default function DishDesignerComponent(
             };
         };
 
+        // Checks if the dish comes from table or from dish list
         if (fromCoordinates) {
-            mealInPlan = mealsOfWeek.toSpliced(
+            mealInPlan = plannedWeek.toSpliced(
                 fromCoordinates.dayIndex,
                 1,
-                updatePlannedMeals(mealsOfWeek, fromCoordinates.dayIndex, fromCoordinates.mealIndex, mealSlot(fromCoordinates.mealIndex))
+                updatePlannedMeals(plannedWeek, fromCoordinates.dayIndex, fromCoordinates.mealIndex, mealSlot(fromCoordinates.mealIndex))
             );
         } else {
-            mealInPlan = mealsOfWeek;
+            mealInPlan = plannedWeek;
         }
 
         const addMeal: PlannedWeekType = mealInPlan.toSpliced(
@@ -137,13 +150,13 @@ export default function DishDesignerComponent(
             1,
             updatePlannedMeals(mealInPlan, toCoordinates.dayIndex, toCoordinates.mealIndex, mealWithNewDish(toCoordinates.mealIndex))
         )
-        setMealsOfWeek(addMeal);
+        plannedWeek = addMeal
     }
     return (
         <main className="grid grid-cols-12 gap-6 px-24 p-8">
             <div className="col-span-12">
-                <h1 className="items-center font-medium h-12 text-4xl flex">Semana 43</h1>
-                <h2 className="items-center h-12 text-3xl flex">12 jul - 18 jul</h2>
+                <h1 className="items-center font-medium h-12 text-4xl flex">Semana {getCurrentWeekNumber}</h1>
+                <h2 className="items-center h-12 text-3xl flex">{currentWeekStartAndEndDatesString}</h2>
             </div>
             <div className="col-span-4 flex flex-col gap-1">
                 <Select>
@@ -162,7 +175,13 @@ export default function DishDesignerComponent(
                         </SelectGroup>
                     </SelectContent>
                 </Select>
-                <Input placeholder="Introduce texto para filtrar los platos:" />
+                <Input
+                    placeholder="Introduce texto para filtrar los platos:"
+                    onChange={(e) => {
+                        filterListOfDishes(e.target.value);
+                    }}
+                    defaultValue={params.get('dishName')?.toString()}
+                />
                 <div className="border-[1px] rounded-[2px] px-4 py-2 text-sm font-medium flex flex-col gap-3 h-80 overflow-x-scroll">
                     <div>Dishes:</div>
                     {dishList.map((dish) => {
@@ -181,21 +200,18 @@ export default function DishDesignerComponent(
                 <div className="grid grid-cols-8 gap-x-3 gap-y-1 text-center">
                     {/* Days of the week */}
                     <div className="flex justify-between items-center">
-                        <ChevronLeftCircle onClick={(() => adjustWeek('previous'))} />
-                        <ChevronRightCircle onClick={(() => adjustWeek('next'))} />
+                        <ChevronLeftCircle onClick={(() => adjustCurrentWeek('previous'))} />
+                        <ChevronRightCircle onClick={(() => adjustCurrentWeek('next'))} />
                     </div>
-                    {weekDates.map((dia) =>
-                        <div key={dia.getDay()} className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">{dia.getDate()}</div>
+                    {currentWeekDates.map((day) =>
+                        <div key={day.getDay()} className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">{day.getDate()}</div>
                     )}
                     <div className="grid gap-1">
-                        <div className="h-16 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Desayuno</div>
-                        <div className="h-16 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Media mañana</div>
-                        <div className="h-16 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Almuerzo</div>
-                        <div className="h-16 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Merienda</div>
-                        <div className="h-16 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Cena</div>
-                        <div className="h-16 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">Snack</div>
+                        {MEALS.map((meal) =>
+                            <div key={meal.label} className="h-16 items-center flex justify-center text-xs font-medium border-[1px] bg-slate-100 rounded-[4px]">{meal.label}</div>
+                        )}
                     </div>
-                    {mealsOfWeek.map((day, dayIndex) => {
+                    {plannedWeek.map((day, dayIndex) => {
                         return (
                             <div key={day.id} className="grid gap-1 h-96">
                                 {day.plannedMeal.map((mealsOfADay, mealIndex) => {
@@ -242,8 +258,4 @@ export default function DishDesignerComponent(
             </div>
         </main>
     )
-}
-
-function uuidv4() {
-    throw new Error("Function not implemented.");
 }

@@ -5,6 +5,68 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Gets the number of a week given a date
+ * @param dateToCompare the date whose week we want to know
+ * @returns The number of a week
+ */
+export const getWeekNumber = (dateToCompare: Date) => {
+  const firstDayOfYear = new Date(new Date().getFullYear(), 0, 1).getTime();
+  const difference = dateToCompare.getTime() - firstDayOfYear;
+  return Math.ceil(((difference) / 86400000 + 1) / 7)
+}
+
+export const MONTHS = [
+  {
+    label: 'January',
+    short: 'Jan'
+  },
+  {
+    label: 'February',
+    short: 'Feb'
+  },
+  {
+    label: 'March',
+    short: 'Mar'
+  },
+  {
+    label: 'April',
+    short: 'Apr'
+  },
+  {
+    label: 'May',
+    short: 'May'
+  },
+  {
+    label: 'June',
+    short: 'Jun'
+  },
+  {
+    label: 'July',
+    short: 'Jul'
+  },
+  {
+    label: 'August',
+    short: 'Aug'
+  },
+  {
+    label: 'September',
+    short: 'Sep'
+  },
+  {
+    label: 'October',
+    short: 'Oct'
+  },
+  {
+    label: 'November',
+    short: 'Nov'
+  },
+  {
+    label: 'December',
+    short: 'Dec'
+  }
+];
+
 export const MEALS = [
   {
     label: 'BREAKFAST',
@@ -26,7 +88,6 @@ export const MEALS = [
     icon: '',
   }
 ];
-
 
 /**
 * Calculates an array of seven consecutive dates starting from a given date

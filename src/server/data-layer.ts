@@ -9,14 +9,13 @@ import { plannedWeekSchema } from "~/models/schemas/plannedDay";
  * @returns the days of the week
  */
 export async function fetchPlannedDays(datesOfTheWeek: Date[]) {
-    const MEALS = ['BREAKFAST', 'MIDMORNING', 'LUNCH', 'SNACK', 'DINNER'];
+    const MEALS = ['BREAKFAST', 'MIDMORNING', 'LUNCH', 'SNACK', 'DINNER', 'COMPLEMENTARY'];
     const comidaPlanificada = await db.plannedDay.findMany({
         include: {
             plannedMeal: {
                 select: {
                     dish: true,
                     meal: true,
-                    dishId: true,
                     id: true
                 }
             }
@@ -32,7 +31,41 @@ export async function fetchPlannedDays(datesOfTheWeek: Date[]) {
     // Sorts meals to show them in order
     comidaPlanificada.map((comida) => comida.plannedMeal.sort((a, b) => MEALS.indexOf(a.meal) - MEALS.indexOf(b.meal)))
 
-    return comidaPlanificada;
+    const fillMeals = comidaPlanificada.map((dayInBBDD) => {
+        return {
+            ...dayInBBDD,
+            "plannedMeal": Array.from({ length: 6 }, (_, _index) => {
+                return dayInBBDD.plannedMeal.find((mealsOfADay) => mealsOfADay.meal === MEALS[_index]!) ?? {
+                    id: Math.random(),
+                    dishId: Math.random(),
+                    dish: {
+                        id: Math.random(),
+                        name: '-'
+                    },
+                    meal: MEALS[_index]!
+                }
+            })
+        }
+    });
+    const fillDays = datesOfTheWeek.map((dayInMemory) => {
+        return fillMeals.find((dayInBBDD) => dayInBBDD.day.getTime() === dayInMemory.getTime()) ?? {
+            "id": Math.random(),
+            "day": dayInMemory,
+            "plannedMeal": Array.from({ length: 6 }, (_, _index) => {
+                return {
+                    id: _index,
+                    dish: {
+                        id: Math.random(),
+                        name: '-'
+                    },
+                    meal: MEALS[_index]!
+                }
+            })
+        };
+    });
+    console.log(fillDays);
+
+    return fillDays;
 }
 
 /**
@@ -69,8 +102,14 @@ export async function fetchPlannedMealsWellFormated(datesOfTheWeek: Date[]) {
  * Fetch list of dish
  * @returns 
  */
-export async function fetchDishList() {
-    const dishes = await db.dish.findMany();
+export async function fetchDishList(dishName: string) {
+    const dishes = await db.dish.findMany({
+        where: {
+            name: {
+                startsWith: dishName ?? undefined
+            }
+        }
+    });
     const { success, data } = dishListSchema.safeParse(dishes);
     if (!success) throw new Error('Invalid dish data');
     return data;
