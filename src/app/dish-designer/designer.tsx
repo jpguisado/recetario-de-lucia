@@ -17,7 +17,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getWeekDates, getWeekStartDate, MEALS } from "~/lib/utils";
 import { type PlannedMealType } from "~/models/types/plannedMeal";
 import { Button } from "~/components/ui/button";
-import { Skeleton } from "~/components/ui/skeleton";
 import TableSkeleton from "./table-skeleton";
 export default function DishDesignerComponent(
     { dishList, storedPlannedWeek }: {
@@ -25,6 +24,8 @@ export default function DishDesignerComponent(
         dishList: DishListType,
     }
 ) {
+    // TODO: cuando busco un plato, se borra el contenido de la tabla.
+    // Cuando recargo la página con parámetros en la URL, se pierden los días
     const pathname = usePathname();
     const router = useRouter();
     const params = useSearchParams();
@@ -219,12 +220,12 @@ export default function DishDesignerComponent(
                     )}
                     <div className="grid gap-1">
                         {MEALS.map((meal) =>
-                            <div key={meal.label} className="h-14 items-center flex justify-center text-xs font-medium border-[1px] bg-slate-100 rounded-[4px]">{meal.label}</div>
+                            <div key={meal.label} className="h-16 items-center flex justify-center text-xs font-medium border-[1px] bg-slate-100 rounded-[4px]">{meal.label}</div>
                         )}
                     </div>
                     {plannedWeek.map((day, dayIndex) => {
                         return (
-                            <div key={day.id} className="grid gap-1 h-96">
+                            <div key={day.id} className="grid gap-1 h-fit">
                                 {day.plannedMeal.map((mealsOfADay, mealIndex) => {
                                     return (
                                         <div key={mealsOfADay.id}
@@ -246,7 +247,8 @@ export default function DishDesignerComponent(
                                                 setIsHovering(null);
                                                 updatePlannedWeek(draggedValue);
                                             }}
-                                            className={`h-14 
+                                            className={`
+                                            h-16 
                                             items-center
                                             flex 
                                             justify-center
@@ -258,7 +260,7 @@ export default function DishDesignerComponent(
                                                     'border-slate-700 border-dashed border-2 rounded-[4px]' :
                                                     ''}`
                                             }>
-                                            {isPending ? <TableSkeleton /> : <div className="overflow-hidden h-12">{mealsOfADay.dish.name}</div>}
+                                            {isPending ? <TableSkeleton /> : <div className="overflow-y-scroll h-12">{mealsOfADay.dish.name}</div>}
                                         </div>
                                     )
                                 })}

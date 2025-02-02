@@ -104,7 +104,7 @@ export async function fetchDishList(dishName: string) {
     const dishes = await db.dish.findMany({
         where: {
             name: {
-                startsWith: dishName ?? undefined
+                contains: dishName ?? undefined
             }
         }
     });
