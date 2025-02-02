@@ -18,6 +18,8 @@ import { getWeekDates, getWeekStartDate, MEALS } from "~/lib/utils";
 import { type PlannedMealType } from "~/models/types/plannedMeal";
 import { Button } from "~/components/ui/button";
 import TableSkeleton from "./table-skeleton";
+import { storePlannedWeek } from "~/server/plannedWeek";
+import type { MealsType } from "~/models/types/meals.type";
 export const dynamic = 'force-dynamic'
 export default function DishDesignerComponent(
     { dishList, storedPlannedWeek }: {
@@ -30,7 +32,6 @@ export default function DishDesignerComponent(
     const pathname = usePathname();
     const router = useRouter();
     const params = useSearchParams();
-    const currentDayOnClient = new Date();
     const week = use(storedPlannedWeek);
     const [fromCoordinates, setFromCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
     const [toCoordinates, setToCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
@@ -84,7 +85,7 @@ export default function DishDesignerComponent(
         params.set('y', newDate.getFullYear().toString());
         startTransition(() => {
             router.replace(`${pathname}?${params.toString()}`);
-          });
+        });
     }
 
     const filterListOfDishes = (dishName: string) => {
@@ -156,6 +157,11 @@ export default function DishDesignerComponent(
             updatePlannedMeals(mealInPlan, toCoordinates.dayIndex, toCoordinates.mealIndex, mealWithNewDish(toCoordinates.mealIndex))
         )
         setPlannedWeek(addMeal);
+    }
+    async function updateCurrentWeekPlan(day: Date, meal: MealsType, dish: DishType) {
+        startTransition(async () => {
+            await storePlannedWeek(day, meal, dish);
+        })
     }
     return (
         <>  
@@ -246,6 +252,7 @@ export default function DishDesignerComponent(
                                             onDragLeave={() => { setIsHovering(null) }}
                                             onDrop={() => {
                                                 setIsHovering(null);
+                                                void updateCurrentWeekPlan(day.day, mealsOfADay.meal, draggedValue);
                                                 updatePlannedWeek(draggedValue);
                                             }}
                                             className={`
