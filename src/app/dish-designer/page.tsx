@@ -1,4 +1,4 @@
-import { getWeekDates, getWeekStartDate } from "~/lib/utils";
+import { getWeekDates, getWeekNumber, getWeekStartDate, MONTHS } from "~/lib/utils";
 import DishDesignerComponent from "./designer";
 import { fetchDishList, fetchPlannedDays } from "~/server/data-layer";
 import { Suspense } from "react";
@@ -35,13 +35,24 @@ export default async function Page(props: {
     const dates = getWeekDates(selectedStartingDate);
     const dishList = await fetchDishList(dishName);
     const plannedWeek = fetchPlannedDays(dates);
-
+    const getCurrentWeekNumber = getWeekNumber(dates[0]!);
+    const currentWeekStartAndEndDatesString = `
+        ${dates[0]!.getDate()} 
+        ${MONTHS[dates[0]!.getMonth()]?.short} - 
+        ${dates.at(6)!.getDate()} 
+        ${MONTHS[dates[6]!.getMonth()]?.short}`
     return (
-        <Suspense fallback={<div>Loading...</div>}>
-        <DishDesignerComponent
-                storedPlannedWeek={plannedWeek}
-                dishList={dishList}
-            />
-        </Suspense>
+        <main className="grid grid-cols-12 gap-6 px-24 p-8">
+            <div className="col-span-12">
+                <h1 className="items-center font-medium h-12 text-4xl flex">Semana {getCurrentWeekNumber}</h1>
+                <h2 className="items-center h-12 text-3xl flex">{currentWeekStartAndEndDatesString}</h2>
+            </div>
+            <Suspense fallback={<div>Loading...</div>}>
+                <DishDesignerComponent
+                    storedPlannedWeek={plannedWeek}
+                    dishList={dishList}
+                />
+            </Suspense>
+        </main>
     )
 }

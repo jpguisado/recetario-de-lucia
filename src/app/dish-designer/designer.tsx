@@ -1,6 +1,6 @@
 'use client';
 import { AppleIcon, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useTransition } from "react";
 import type { DishListType, DishType } from "~/models/types/dish.type";
 import type { PlannedWeekType } from "~/models/types/plannedDay";
 import { Input } from "~/components/ui/input";
@@ -14,8 +14,11 @@ import {
     SelectValue,
 } from "~/components/ui/select";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { getWeekDates, getWeekNumber, getWeekStartDate, MEALS, MONTHS } from "~/lib/utils";
+import { getWeekDates, getWeekStartDate, MEALS } from "~/lib/utils";
 import { type PlannedMealType } from "~/models/types/plannedMeal";
+import { Button } from "~/components/ui/button";
+import { Skeleton } from "~/components/ui/skeleton";
+import TableSkeleton from "./table-skeleton";
 export default function DishDesignerComponent(
     { dishList, storedPlannedWeek }: {
         storedPlannedWeek: Promise<PlannedWeekType>,
@@ -32,6 +35,7 @@ export default function DishDesignerComponent(
     const [toCoordinates, setToCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
     const [isHovering, setIsHovering] = useState<{ x: number, y: number } | null>();
     const [plannedWeek, setPlannedWeek] = useState(week);
+    const [isPending, startTransition] = useTransition();
     const [draggedValue, setDraggedValue] = useState<DishType>({
         name: '-',
         id: Math.random(),
@@ -40,15 +44,10 @@ export default function DishDesignerComponent(
     });
     useEffect(() => {
         setPlannedWeek(week)
-    },[week])
+    }, [week])
     const [currentWeekDates, setCurrentWeekDates] = useState(
         getWeekDates(firstDayOfTheWeek)
     );
-    const currentWeekStartAndEndDatesString = `
-        ${currentWeekDates[0]!.getDate()} 
-        ${MONTHS[currentWeekDates[0]!.getMonth()]?.short} - 
-        ${currentWeekDates.at(6)!.getDate()} 
-        ${MONTHS[currentWeekDates[6]!.getMonth()]?.short}`
     function checkActiveDate() {
         if (params.has('d') && params.has('m') && params.has('y')) {
             const d = parseInt(params.get('d')!);
@@ -60,7 +59,6 @@ export default function DishDesignerComponent(
             return firstDayOfTheWeek;
         }
     }
-    const getCurrentWeekNumber = getWeekNumber(currentWeekDates[0]!);
     function adjustCurrentWeek(direction: string) {
         const currentDate = checkActiveDate();
         if (direction === 'next') {
@@ -82,9 +80,9 @@ export default function DishDesignerComponent(
         params.set('d', newDate.getDate().toString());
         params.set('m', newDate.getMonth().toString());
         params.set('y', newDate.getFullYear().toString());
-        console.log('Paramss d',params.get('d'))
-        router.replace(`${pathname}?${params.toString()}`);
-        // window.history.pushState(null, '', `?${params.toString()}`);
+        startTransition(() => {
+            router.replace(`${pathname}?${params.toString()}`);
+          });
     }
 
     const filterListOfDishes = (dishName: string) => {
@@ -158,12 +156,8 @@ export default function DishDesignerComponent(
         setPlannedWeek(addMeal);
     }
     return (
-        <main className="grid grid-cols-12 gap-6 px-24 p-8">
-            <div className="col-span-12">
-                <h1 className="items-center font-medium h-12 text-4xl flex">Semana {getCurrentWeekNumber}</h1>
-                <h2 className="items-center h-12 text-3xl flex">{currentWeekStartAndEndDatesString}</h2>
-            </div>
-            <div className="col-span-4 flex flex-col gap-1">
+        <>  
+            <div className="col-span-3 flex flex-col gap-1">
                 <Select>
                     <SelectTrigger className="w-full">
                         <SelectValue placeholder="Selecciona una categoría" />
@@ -201,19 +195,31 @@ export default function DishDesignerComponent(
                     })}
                 </div>
             </div>
-            <div className="col-span-8 gap-3 flex flex-col">
+            <div className="col-span-9 gap-3 flex flex-col">
                 <div className="grid grid-cols-8 gap-x-3 gap-y-1 text-center">
                     {/* Days of the week */}
-                    <div className="flex justify-between items-center">
-                        <ChevronLeftCircle onClick={(() => adjustCurrentWeek('previous'))} />
-                        <ChevronRightCircle onClick={(() => adjustCurrentWeek('next'))} />
+                    <div className="flex justify-between items-center gap-1">
+                        <Button
+                            variant={"outline"}
+                            disabled={isPending}
+                            onClick={(() => adjustCurrentWeek('previous'))}
+                        >
+                            <ChevronLeftCircle />
+                        </Button>
+                        <Button
+                            variant={"outline"}
+                            disabled={isPending}
+                            onClick={(() => adjustCurrentWeek('next'))}
+                        >
+                            <ChevronRightCircle />
+                        </Button>
                     </div>
                     {currentWeekDates.map((day) =>
                         <div key={day.getDay()} className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">{day.getDate()}</div>
                     )}
                     <div className="grid gap-1">
                         {MEALS.map((meal) =>
-                            <div key={meal.label} className="h-16 items-center flex justify-center text-xs font-medium border-[1px] bg-slate-100 rounded-[4px]">{meal.label}</div>
+                            <div key={meal.label} className="h-14 items-center flex justify-center text-xs font-medium border-[1px] bg-slate-100 rounded-[4px]">{meal.label}</div>
                         )}
                     </div>
                     {plannedWeek.map((day, dayIndex) => {
@@ -240,7 +246,7 @@ export default function DishDesignerComponent(
                                                 setIsHovering(null);
                                                 updatePlannedWeek(draggedValue);
                                             }}
-                                            className={`h-16 
+                                            className={`h-14 
                                             items-center
                                             flex 
                                             justify-center
@@ -252,7 +258,7 @@ export default function DishDesignerComponent(
                                                     'border-slate-700 border-dashed border-2 rounded-[4px]' :
                                                     ''}`
                                             }>
-                                            {mealsOfADay.dish.name}
+                                            {isPending ? <TableSkeleton /> : <div className="overflow-hidden h-12">{mealsOfADay.dish.name}</div>}
                                         </div>
                                     )
                                 })}
@@ -261,6 +267,6 @@ export default function DishDesignerComponent(
                     })}
                 </div>
             </div>
-        </main>
+        </>
     )
 }
