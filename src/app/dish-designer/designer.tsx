@@ -18,6 +18,7 @@ import { getWeekDates, getWeekStartDate, MEALS } from "~/lib/utils";
 import { type PlannedMealType } from "~/models/types/plannedMeal";
 import { Button } from "~/components/ui/button";
 import TableSkeleton from "./table-skeleton";
+export const dynamic = 'force-dynamic'
 export default function DishDesignerComponent(
     { dishList, storedPlannedWeek }: {
         storedPlannedWeek: Promise<PlannedWeekType>,
@@ -30,8 +31,7 @@ export default function DishDesignerComponent(
     const router = useRouter();
     const params = useSearchParams();
     const currentDayOnClient = new Date();
-    const week = use(storedPlannedWeek)
-    const firstDayOfTheWeek = getWeekStartDate(currentDayOnClient);
+    const week = use(storedPlannedWeek);
     const [fromCoordinates, setFromCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
     const [toCoordinates, setToCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
     const [isHovering, setIsHovering] = useState<{ x: number, y: number } | null>();
@@ -46,9 +46,6 @@ export default function DishDesignerComponent(
     useEffect(() => {
         setPlannedWeek(week)
     }, [week])
-    const [currentWeekDates, setCurrentWeekDates] = useState(
-        getWeekDates(firstDayOfTheWeek)
-    );
     function checkActiveDate() {
         if (params.has('d') && params.has('m') && params.has('y')) {
             const d = parseInt(params.get('d')!);
@@ -60,6 +57,10 @@ export default function DishDesignerComponent(
             return firstDayOfTheWeek;
         }
     }
+    const firstDayOfTheWeek = getWeekStartDate(checkActiveDate());
+    const [currentWeekDates, setCurrentWeekDates] = useState(
+        getWeekDates(firstDayOfTheWeek)
+    );
     function adjustCurrentWeek(direction: string) {
         const currentDate = checkActiveDate();
         if (direction === 'next') {
