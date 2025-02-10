@@ -55,8 +55,8 @@ model plannedMeal {
     meal Meal
     dish Dish @relation(fields: [dishId], references: [id])
     dishId Int
-    plannedDay plannedDay @relation(fields: [plannedDayId], references: [id])
-    plannedDayId Int
+    plannedDay plannedDay ? @relation(fields: [plannedDayId], references: [id])
+    plannedDayId Int ?
 }
 
 model plannedDay {

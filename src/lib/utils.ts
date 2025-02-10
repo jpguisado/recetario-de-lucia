@@ -87,7 +87,7 @@ export const MEALS = [
     label: 'COMPLEMENTARY',
     icon: '',
   }
-];
+] as const;
 
 /**
 * Calculates an array of seven consecutive dates starting from a given date

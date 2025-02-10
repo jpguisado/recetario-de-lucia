@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { dishSchema } from "../schemas/dish";
+import { plannedMealSchema } from "./plannedMeal";
 
 export const mealSchema = z.union([
     z.literal('BREAKFAST'),
@@ -9,12 +9,6 @@ export const mealSchema = z.union([
     z.literal('SNACK'),
     z.literal('COMPLEMENTARY'),
 ]);
-
-export const plannedMealSchema = z.object({
-    id: z.number().optional(),
-    meal: z.string(),
-    dish: dishSchema,
-});
 
 export const plannedDaySchema = z.object({
     id: z.number().optional(),

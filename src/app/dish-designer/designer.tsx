@@ -2,7 +2,7 @@
 import { AppleIcon, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
 import { use, useEffect, useState, useTransition } from "react";
 import type { DishListType, DishType } from "~/models/types/dish.type";
-import type { PlannedWeekType } from "~/models/types/plannedDay";
+import type { PlannedDayType, PlannedWeekType } from "~/models/types/plannedDay";
 import { Input } from "~/components/ui/input";
 import {
     Select,
@@ -18,8 +18,7 @@ import { getWeekDates, getWeekStartDate, MEALS } from "~/lib/utils";
 import { type PlannedMealType } from "~/models/types/plannedMeal";
 import { Button } from "~/components/ui/button";
 import TableSkeleton from "./table-skeleton";
-import { storePlannedWeek } from "~/server/plannedWeek";
-import type { MealsType } from "~/models/types/meals.type";
+import { storePlannedDay } from "~/server/plannedWeek";
 export const dynamic = 'force-dynamic'
 export default function DishDesignerComponent(
     { dishList, storedPlannedWeek }: {
@@ -40,7 +39,7 @@ export default function DishDesignerComponent(
     const [isPending, startTransition] = useTransition();
     const [draggedValue, setDraggedValue] = useState<DishType>({
         name: '-',
-        id: Math.random(),
+        id: 1,
         recipe: '',
         ingredientList: []
     });
@@ -55,7 +54,7 @@ export default function DishDesignerComponent(
             const dateInParams = new Date(y, m, d);
             return dateInParams;
         } else {
-            return firstDayOfTheWeek;
+            return new Date();
         }
     }
     const firstDayOfTheWeek = getWeekStartDate(checkActiveDate());
@@ -113,7 +112,7 @@ export default function DishDesignerComponent(
         const mealSlot = (mealIndex: number) => ({
             meal: MEALS[mealIndex]!.label,
             id: Math.random(),
-            dish: { name: '-' }
+            dish: { name: '-', id: 1 }
         });
 
         // Generate a empty meal slot
@@ -150,7 +149,6 @@ export default function DishDesignerComponent(
         } else {
             mealInPlan = plannedWeek;
         }
-
         const addMeal: PlannedWeekType = mealInPlan.toSpliced(
             toCoordinates.dayIndex,
             1,
@@ -158,9 +156,18 @@ export default function DishDesignerComponent(
         )
         setPlannedWeek(addMeal);
     }
-    async function updateCurrentWeekPlan(day: Date, meal: MealsType, dish: DishType) {
+    async function updateCurrentWeekPlan(
+        dayFrom: PlannedDayType,
+        mealsOfADayFrom: PlannedMealType,
+        dayTo: PlannedDayType,
+        mealsOfADayTo: PlannedMealType
+    ) {
+        console.log('from day: ', dayFrom);
+        console.log('to day: ', dayTo);
+        console.log('from meal: ', mealsOfADayFrom);
+        console.log('to meal: ', mealsOfADayTo);
         startTransition(async () => {
-            await storePlannedWeek(day, meal, dish);
+            await storePlannedDay(dayFrom, mealsOfADayFrom, dayTo, mealsOfADayTo);
         })
     }
     return (
@@ -252,7 +259,11 @@ export default function DishDesignerComponent(
                                             onDragLeave={() => { setIsHovering(null) }}
                                             onDrop={() => {
                                                 setIsHovering(null);
-                                                void updateCurrentWeekPlan(day.day, mealsOfADay.meal, draggedValue);
+                                                void updateCurrentWeekPlan(
+                                                    plannedWeek[fromCoordinates!.dayIndex]!,
+                                                    { id: mealsOfADay.id, meal: MEALS[fromCoordinates!.mealIndex]!.label, dish: { name: '-', id: 1 } },
+                                                    day,
+                                                    { id: mealsOfADay.id, meal: mealsOfADay.meal, dish: draggedValue });
                                                 updatePlannedWeek(draggedValue);
                                             }}
                                             className={`
