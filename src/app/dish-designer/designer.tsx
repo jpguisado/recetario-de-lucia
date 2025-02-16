@@ -279,7 +279,7 @@ export default function DishDesignerComponent(
                                                     'border-slate-700 border-dashed border-2 rounded-[4px]' :
                                                     ''}`
                                             }>
-                                            {isPending ? <TableSkeleton /> : <div className="overflow-y-scroll h-12">{mealsOfADay.dish.name}</div>}
+                                            {isPending ? <TableSkeleton /> : <div className="h-12">{mealsOfADay.dish.name}</div>}
                                         </div>
                                     )
                                 })}

@@ -2,6 +2,69 @@
 import { dishListSchema } from "~/models/schemas/dish";
 import { db } from "./db";
 import { plannedWeekSchema } from "~/models/schemas/plannedDay";
+import { MEALS } from "~/lib/utils";
+
+export async function fetchActiveWeekData(datesOfTheWeek: Date[]) {
+    const existingDays = await db.plannedDay.findMany({
+        where: {
+            day: {
+                in: datesOfTheWeek
+            }
+        }
+    });
+     
+    const storedDays = existingDays.map((day) => day.day.getTime());
+    const pendingDays = datesOfTheWeek.filter((day) => {
+        return !storedDays.includes(day.getTime());
+    })
+
+    for (const element of pendingDays) {
+        await db.plannedDay.create({
+            data: {
+                day: element,
+            }
+        })
+    }
+
+    const fetchedDays = await db.plannedDay.findMany({
+        include: {
+            plannedMeal: {
+                select: {
+                    dish: true,
+                    meal: true,
+                    id: true
+                }
+            }
+        }, where: {
+            day: {
+                in: datesOfTheWeek
+            }
+        }, orderBy: {
+            day: "asc"
+        }
+    });
+
+    const fillMeals = fetchedDays.map((dayInBBDD) => {
+        return {
+            ...dayInBBDD,
+            "plannedMeal": Array.from({ length: 6 }, (_, _index) => {
+                return dayInBBDD.plannedMeal.find((mealsOfADay) => mealsOfADay.meal === MEALS[_index]!.label) ?? {
+                    id: Math.random(),
+                    dishId: Math.random(),
+                    dish: {
+                        id: Math.random(),
+                        name: '-'
+                    },
+                    meal: MEALS[_index]!.label
+                }
+            })
+        }
+    });
+
+    return fillMeals;
+}
+
+
 
 /**
  * Gets all the planned days of a week, including meals an dishes.

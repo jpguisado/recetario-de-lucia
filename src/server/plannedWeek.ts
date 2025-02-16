@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "./db";
+import type { MealsType } from "~/models/types/meals.type";
 import type { PlannedDayType } from "~/models/types/plannedDay";
 import type { PlannedMealType } from "~/models/types/plannedMeal";
 
@@ -63,4 +64,15 @@ export async function storePlannedDay(
             id: plannedMealTo.id
         }
     });
+}
+
+export async function updateMealOfDay(dishId: number, mealId: number) {
+    await db.plannedMeal.update({
+        data: {
+            dishId: dishId,
+        },
+        where: {
+            id: mealId,
+        }
+    })
 }
