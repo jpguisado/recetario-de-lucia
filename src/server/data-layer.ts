@@ -23,6 +23,15 @@ export async function fetchActiveWeekData(datesOfTheWeek: Date[]) {
             data: {
                 day: element,
             }
+        }).then(async (day) => {
+            for (const meal of MEALS) {
+                await db.plannedMeal.create({
+                    data: {
+                        plannedDayId: day.id,
+                        meal: meal.label
+                    }
+                })
+            }
         })
     }
 
@@ -43,25 +52,9 @@ export async function fetchActiveWeekData(datesOfTheWeek: Date[]) {
             day: "asc"
         }
     });
-
-    const fillMeals = fetchedDays.map((dayInBBDD) => {
-        return {
-            ...dayInBBDD,
-            "plannedMeal": Array.from({ length: 6 }, (_, _index) => {
-                return dayInBBDD.plannedMeal.find((mealsOfADay) => mealsOfADay.meal === MEALS[_index]!.label) ?? {
-                    id: Math.random(),
-                    dishId: Math.random(),
-                    dish: {
-                        id: Math.random(),
-                        name: '-'
-                    },
-                    meal: MEALS[_index]!.label
-                }
-            })
-        }
-    });
-
-    return fillMeals;
+    const MEALS = ['BREAKFAST', 'MIDMORNING', 'LUNCH', 'SNACK', 'DINNER', 'COMPLEMENTARY'];
+    fetchedDays.map((comida) => comida.plannedMeal.sort((a, b) => MEALS.indexOf(a.meal) - MEALS.indexOf(b.meal)))
+    return fetchedDays;
 }
 
 

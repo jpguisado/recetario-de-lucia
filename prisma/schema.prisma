@@ -53,8 +53,8 @@ enum Meal {
 model plannedMeal {
     id Int @id @default(autoincrement())
     meal Meal
-    dish Dish @relation(fields: [dishId], references: [id])
-    dishId Int
+    dish Dish ? @relation(fields: [dishId], references: [id])
+    dishId Int ?
     plannedDay plannedDay ? @relation(fields: [plannedDayId], references: [id])
     plannedDayId Int ?
 }

@@ -23,21 +23,21 @@ import { storePlannedDay, updateMealOfDay } from "~/server/plannedWeek";
 import TableSkeleton from "../dish-designer/table-skeleton";
 export const dynamic = 'force-dynamic';
 const NewDesignComponent = (
-    { dishList, storedPlannedWeek, currentWeek }: {
+    { storedDishDish, storedPlannedWeek, currentWeek }: {
         storedPlannedWeek: Promise<PlannedWeekType>,
         currentWeek: Date[]
-        dishList?: DishListType,
+        storedDishDish: Promise<DishListType>,
     }
 ) => {
     const pathname = usePathname();
     const router = useRouter();
     const params = useSearchParams();
     const week = use(storedPlannedWeek);
+    const dishList = use(storedDishDish);
     const [isHovering, setIsHovering] = useState<{ x: number, y: number } | null>();
     const [isPending, startTransition] = useTransition();
     const [fromCoordinates, setFromCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
     const [toCoordinates, setToCoordinates] = useState<{ dayIndex: number, mealIndex: number }>();
-    const [plannedWeek, setPlannedWeek] = useState(week);
     const [draggedValue, setDraggedValue] = useState<DishType>({
         name: '-',
         id: 1,
@@ -83,105 +83,137 @@ const NewDesignComponent = (
         }
     }
     async function updateCurrentMeal() {
-        const dayId = week[fromCoordinates!.dayIndex]!.id;
-        const mealId = week[fromCoordinates!.mealIndex]!.id;
-        await updateMealOfDay(dayId!, mealId!)
+        const mealId = week[fromCoordinates!.dayIndex]!.plannedMeal[fromCoordinates!.mealIndex]?.id;
+        await updateMealOfDay(1, mealId!)
     }
     async function updateTargetMeal(targetMealId: number, targetDishId: number) {
-        if(fromCoordinates) {
+        if (fromCoordinates) {
             await updateCurrentMeal()
         }
-        await updateMealOfDay(targetDishId, targetMealId)
-        // console.log(targetDayId);
-        // console.log(targetMealId);
-        // console.log(targetDishId);
+        startTransition(async () => {
+            await updateMealOfDay(targetDishId, targetMealId);
+        })
     }
 
     return (
-        <div className="col-span-9 gap-3 flex flex-col">
-            <div className="grid grid-cols-8 gap-x-3 gap-y-1 text-center">
-                {/* Days of the week */}
-                <div className="flex justify-between items-center gap-1">
-                    <Button
-                        variant={"outline"}
-                        disabled={isPending}
-                        onClick={(() => adjustCurrentWeek('previous'))}
-                    >
-                        <ChevronLeftCircle />
-                    </Button>
-                    <Button
-                        variant={"outline"}
-                        disabled={isPending}
-                        // onClick={(() => adjustCurrentWeek('next'))}
-                    >
-                        Hoy
-                    </Button>
-                    <Button
-                        variant={"outline"}
-                        disabled={isPending}
-                        onClick={(() => adjustCurrentWeek('next'))}
-                    >
-                        <ChevronRightCircle />
-                    </Button>
-                </div>
-                {currentWeek.map((day) =>
-                    <div key={day.getDay()} className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">{day.getDate().toString()}</div>
-                )}
-                <div className="grid gap-1">
-                    {MEALS.map((meal) =>
-                        <div key={meal.label} className="h-16 items-center flex justify-center text-xs font-medium border-[1px] bg-slate-100 rounded-[4px]">{meal.label}</div>
-                    )}
-                </div>
-                {week.map((day, dayIndex) => {
-                    return (
-                        <div key={day.id} className="grid gap-1 h-fit">
-                            {day.plannedMeal.map((mealsOfADay, mealIndex) => {
-                                return (
-                                    <div key={mealsOfADay.id}
-                                        draggable
-                                        onDragStart={
-                                            () => {
-                                                setFromCoordinates({ dayIndex, mealIndex });
-                                                setDraggedValue(mealsOfADay.dish);
-                                            }
-                                        }
-                                        onDragOver={(event) => {
-                                            event.stopPropagation();
-                                            event.preventDefault();
-                                            setToCoordinates({ dayIndex, mealIndex });
-                                            setIsHovering({ x: dayIndex, y: mealIndex });
-                                        }}
-                                        onDragLeave={() => { setIsHovering(null) }}
-                                        onDrop={() => {
-                                            setIsHovering(null);
-                                            updateTargetMeal(mealsOfADay.id, draggedValue.id);
-                                            // void updateCurrentWeekPlan(
-                                            //     plannedWeek[fromCoordinates!.dayIndex]!,
-                                            //     { id: mealsOfADay.id, meal: MEALS[fromCoordinates!.mealIndex]!.label, dish: { name: '-', id: 1 } },
-                                            //     day,
-                                            //     { id: mealsOfADay.id, meal: mealsOfADay.meal, dish: draggedValue });
-                                            // updatePlannedWeek(draggedValue);
-                                        }}
-                                        className={`
-                                            h-16 
-                                            items-center
-                                            flex 
-                                            justify-center
-                                            text-sm
-                                            font-medium
-                                            transition-all
-                                            duration-200
-                                            ${isHovering?.x === dayIndex && isHovering.y === mealIndex ?
-                                                'border-slate-700 border-dashed border-2 rounded-[4px]' :
-                                                ''}`
-                                        }>
-                                        {isPending ? <TableSkeleton /> : <div className="h-12">{mealsOfADay.dish.name}</div>}
-                                    </div>
-                                )
-                            })}
+        <div className="flex gap-6 h-full">
+            <div className="col-span-3 flex flex-col gap-1">
+                <Select>
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecciona una categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectGroup>
+                            <SelectLabel>Categorías</SelectLabel>
+                            <SelectItem value="desayuno">Desayuno</SelectItem>
+                            <SelectItem value="media mañana">Media mañana</SelectItem>
+                            <SelectItem value="almuerzo">Almuerzo</SelectItem>
+                            <SelectItem value="merienda">Merienda</SelectItem>
+                            <SelectItem value="cena">Cena</SelectItem>
+                            <SelectItem value="snack">Snack</SelectItem>
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
+                <Input
+                    placeholder="Introduce texto para filtrar los platos:"
+                    onChange={(e) => {
+                        // filterListOfDishes(e.target.value);
+                    }}
+                    defaultValue={params.get('dishName')?.toString()}
+                />
+                <div className="border-[1px] rounded-[2px] px-4 py-2 text-sm font-medium flex flex-col gap-3 h-full overflow-x-scroll">
+                    <div>Dishes:</div>
+                    {dishList?.map((dish) => {
+                        return <div
+                            className="hover:bg-slate-50 border-[1px] bg-white rounded-[2px] p-3 flex gap-2 items-center"
+                            key={dish.id}
+                            draggable
+                            onDragStart={() => setDraggedValue(dish)}>
+                            <AppleIcon />
+                            {dish.name}
                         </div>
-                    )
-                })}
+                    })}
+                </div>
+            </div>
+            <div className="col-span-9 gap-3 flex flex-col">
+                <div className="grid grid-cols-8 gap-x-3 gap-y-1 text-center">
+                    {/* Days of the week */}
+                    <div className="flex justify-between items-center gap-1">
+                        <Button
+                            variant={"outline"}
+                            disabled={isPending}
+                            onClick={(() => adjustCurrentWeek('previous'))}
+                        >
+                            <ChevronLeftCircle />
+                        </Button>
+                        <Button
+                            variant={"outline"}
+                            disabled={isPending}
+                        // onClick={(() => adjustCurrentWeek('next'))}
+                        >
+                            Hoy
+                        </Button>
+                        <Button
+                            variant={"outline"}
+                            disabled={isPending}
+                            onClick={(() => adjustCurrentWeek('next'))}
+                        >
+                            <ChevronRightCircle />
+                        </Button>
+                    </div>
+                    {currentWeek.map((day) =>
+                        <div key={day.getDay()} className="h-12 items-center flex justify-center text-sm font-medium border-[1px] bg-slate-100 rounded-[4px]">{day.getDate().toString()}</div>
+                    )}
+                    <div className="grid gap-1">
+                        {MEALS.map((meal) =>
+                            <div key={meal.label} className="h-16 items-center flex justify-center text-xs font-medium border-[1px] bg-slate-100 rounded-[4px]">{meal.label}</div>
+                        )}
+                    </div>
+                    {week.map((day, dayIndex) => {
+                        return (
+                            <div key={day.id} className="grid gap-1 h-fit">
+                                {day.plannedMeal.map((mealsOfADay, mealIndex) => {
+                                    return (
+                                        <div key={mealsOfADay.id}
+                                            draggable
+                                            onDragStart={
+                                                () => {
+                                                    setFromCoordinates({ dayIndex, mealIndex });
+                                                    setDraggedValue(mealsOfADay.dish!);
+                                                }
+                                            }
+                                            onDragOver={(event) => {
+                                                event.stopPropagation();
+                                                event.preventDefault();
+                                                setToCoordinates({ dayIndex, mealIndex });
+                                                setIsHovering({ x: dayIndex, y: mealIndex });
+                                            }}
+                                            onDragLeave={() => { setIsHovering(null) }}
+                                            onDrop={() => {
+                                                setIsHovering(null);
+                                                void updateTargetMeal(mealsOfADay.id!, draggedValue.id!);
+                                            }}
+                                            className={`
+                                                h-16 
+                                                items-center
+                                                flex 
+                                                justify-center
+                                                text-sm
+                                                font-medium
+                                                transition-all
+                                                duration-200
+                                                ${isHovering?.x === dayIndex && isHovering.y === mealIndex ?
+                                                    'border-slate-700 border-dashed border-2 rounded-[4px]' :
+                                                    ''}`
+                                            }>
+                                            {isPending ? <TableSkeleton /> : <div className="h-12">{mealsOfADay.dish?.name ?? '-'}</div>}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )
+                    })}
+                </div>
             </div>
         </div>
     )

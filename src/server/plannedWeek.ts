@@ -1,5 +1,6 @@
 "use server"
 
+import { revalidatePath } from "next/cache";
 import { db } from "./db";
 import type { MealsType } from "~/models/types/meals.type";
 import type { PlannedDayType } from "~/models/types/plannedDay";
@@ -36,12 +37,12 @@ export async function storePlannedDay(
     await db.plannedMeal.upsert({
         create: {
             plannedDayId: plannedDayFrom.id!,
-            dishId: plannedMealFrom.dish.id!,
+            dishId: plannedMealFrom.dish!.id!,
             meal: plannedMealFrom.meal,
         },
         update: {
             plannedDayId: plannedDayFrom.id!,
-            dishId: plannedMealFrom.dish.id!,
+            dishId: plannedMealFrom.dish!.id!,
             meal: plannedMealFrom.meal,
         },
         where: {
@@ -52,12 +53,12 @@ export async function storePlannedDay(
     await db.plannedMeal.upsert({
         create: {
             plannedDayId: plannedDayTo.id!,
-            dishId: plannedMealTo.dish.id!,
+            dishId: plannedMealTo.dish!.id!,
             meal: plannedMealTo.meal,
         },
         update: {
             plannedDayId: plannedDayTo.id!,
-            dishId: plannedMealTo.dish.id!,
+            dishId: plannedMealTo.dish!.id!,
             meal: plannedMealTo.meal,
         },
         where: {
@@ -74,5 +75,6 @@ export async function updateMealOfDay(dishId: number, mealId: number) {
         where: {
             id: mealId,
         }
-    })
+    });
+    revalidatePath('/server-designer')
 }
