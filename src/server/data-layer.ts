@@ -157,6 +157,7 @@ export async function fetchPlannedMealsWellFormated(datesOfTheWeek: Date[]) {
  * @returns 
  */
 export async function fetchDishList(dishName: string) {
+    console.log('el plato se llama ', dishName)
     const dishes = await db.dish.findMany({
         where: {
             name: {

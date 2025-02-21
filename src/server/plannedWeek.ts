@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "./db";
-import type { MealsType } from "~/models/types/meals.type";
 import type { PlannedDayType } from "~/models/types/plannedDay";
 import type { PlannedMealType } from "~/models/types/plannedMeal";
 

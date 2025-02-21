@@ -38,7 +38,7 @@ export default async function Page(props: {
     const dishList = fetchDishList(dishName);
     return (
         <NewDesignComponent
-            storedDishDish={dishList}
+            storedDishList={dishList}
             storedPlannedWeek={fetchFromServerActiveWeekData}
             currentWeek={datesOfCurrentWeek}
         />
