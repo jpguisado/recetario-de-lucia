@@ -1,8 +1,9 @@
 "use server"
 import { dishListSchema } from "~/models/schemas/dish";
 import { db } from "./db";
-import { plannedWeekSchema } from "~/models/schemas/plannedDay";
+import { plannedDaySchema, plannedWeekSchema } from "~/models/schemas/plannedDay";
 import { MEALS } from "~/lib/utils";
+import { plannedMealSchema } from "~/models/schemas/plannedMeal";
 
 export async function fetchActiveWeekData(datesOfTheWeek: Date[]) {
     
@@ -54,7 +55,10 @@ export async function fetchActiveWeekData(datesOfTheWeek: Date[]) {
         }
     });
     fetchedDays.map((comida) => comida.plannedMeal.sort((a, b) => MEALS.indexOf(a.meal) - MEALS.indexOf(b.meal)))
-    return fetchedDays;
+    const { success, data, error } = plannedDaySchema.array().safeParse(fetchedDays);
+    console.log(data, error)
+    if (!success) throw new Error('Cannot fetch planned meals data.', error);
+    return data;
 }
 
 

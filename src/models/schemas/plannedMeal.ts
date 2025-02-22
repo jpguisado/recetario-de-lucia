@@ -13,5 +13,5 @@ export const mealSchema = z.union([
 export const plannedMealSchema = z.object({
     id: z.number().optional(),
     meal: mealSchema,
-    dish: dishSchema.optional(),
+    dish: dishSchema.nullable(),
 });
