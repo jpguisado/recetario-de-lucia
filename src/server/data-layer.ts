@@ -168,3 +168,20 @@ export async function fetchDishList(dishName: string) {
     if (!success) throw new Error('Invalid dish data');
     return data;
 }
+
+export async function fetchTodaysMeals() {
+    return await db.plannedDay.findUnique(({
+        where: {
+            day: new Date()
+        },
+        include: {
+            plannedMeal: {
+                include: {
+                    dish: true
+                }
+            }
+        }
+    })).then((day) => {
+        return day?.plannedMeal.sort((a, b) => MEALS.indexOf(a.meal) - MEALS.indexOf(b.meal))
+    });
+}
