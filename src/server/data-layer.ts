@@ -5,6 +5,7 @@ import { plannedWeekSchema } from "~/models/schemas/plannedDay";
 import { MEALS } from "~/lib/utils";
 
 export async function fetchActiveWeekData(datesOfTheWeek: Date[]) {
+    
     const existingDays = await db.plannedDay.findMany({
         where: {
             day: {
@@ -28,7 +29,7 @@ export async function fetchActiveWeekData(datesOfTheWeek: Date[]) {
                 await db.plannedMeal.create({
                     data: {
                         plannedDayId: day.id,
-                        meal: meal.label
+                        meal: meal
                     }
                 })
             }
@@ -52,11 +53,9 @@ export async function fetchActiveWeekData(datesOfTheWeek: Date[]) {
             day: "asc"
         }
     });
-    const MEALS = ['BREAKFAST', 'MIDMORNING', 'LUNCH', 'SNACK', 'DINNER', 'COMPLEMENTARY'];
     fetchedDays.map((comida) => comida.plannedMeal.sort((a, b) => MEALS.indexOf(a.meal) - MEALS.indexOf(b.meal)))
     return fetchedDays;
 }
-
 
 
 /**

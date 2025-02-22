@@ -68,6 +68,15 @@ export const MONTHS = [
 ];
 
 export const MEALS = [
+  'BREAKFAST',
+  'MIDMORNING',
+  'LUNCH',
+  'SNACK',
+  'DINNER',
+  'COMPLEMENTARY',
+] as const;
+
+export const MEALS_ICONS = [
   {
     label: 'BREAKFAST',
     icon: ''

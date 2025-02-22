@@ -19,7 +19,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getWeekStartDate, MEALS } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { updateMealOfDay } from "~/server/plannedWeek";
-import TableSkeleton from "../dish-designer/table-skeleton";
+import TableSkeleton from "~/components/custom/table-skeleton";
 export const dynamic = 'force-dynamic';
 const NewDesignComponent = (
     { storedDishList, storedPlannedWeek, currentWeek }: {
@@ -141,7 +141,7 @@ const NewDesignComponent = (
                     })}
                 </div>
             </div>
-            <div className="col-span-9 gap-3 flex flex-col h-full">
+            <div className="col-span-9 gap-3 flex flex-col h-full w-full">
                 <div className="grid grid-cols-[200px_,_repeat(7,minmax(0,_1fr))] gap-x-3 gap-y-1 text-center h-full grid-rows-[3rem]">
                     {/* Days of the week */}
                     <div className="flex justify-between items-center gap-1 h-12">
@@ -172,7 +172,7 @@ const NewDesignComponent = (
                     )}
                     <div className="grid gap-1 h-full">
                         {MEALS.map((meal) =>
-                            <div key={meal.label} className="h-full items-center flex justify-center text-xs font-medium border-[1px] bg-slate-100 rounded-[4px]">{meal.label}</div>
+                            <div key={meal} className="h-full items-center flex justify-center text-xs font-medium border-[1px] bg-slate-100 rounded-[4px]">{meal}</div>
                         )}
                     </div>
                     {week.map((day, dayIndex) => {
@@ -207,7 +207,6 @@ const NewDesignComponent = (
                                                 font-medium
                                                 transition-all
                                                 duration-200
-
                                                 ${isHovering?.x === dayIndex && isHovering.y === mealIndex ?
                                                     'border-slate-700 border-dashed border-2 rounded-[4px]' :
                                                     ''}`
